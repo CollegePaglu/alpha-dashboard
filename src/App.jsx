@@ -1,0 +1,574 @@
+import { useState, useEffect, createContext, useContext } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import './App.css';
+
+// API Configuration
+const API_BASE = 'http://localhost:5000/api/v1';
+
+// Create axios instance
+const api = axios.create({
+  baseURL: API_BASE,
+  headers: { 'Content-Type': 'application/json' }
+});
+
+// Add auth interceptor
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('alphaToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Auth Context
+const AuthContext = createContext(null);
+
+export const useAuth = () => useContext(AuthContext);
+
+// Auth Provider
+function AuthProvider({ children }) {
+  const [alpha, setAlpha] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem('alphaToken');
+    const storedAlpha = localStorage.getItem('alphaData');
+    if (token && storedAlpha) {
+      setAlpha(JSON.parse(storedAlpha));
+    }
+    setLoading(false);
+  }, []);
+
+  const login = (alphaData, tokens) => {
+    localStorage.setItem('alphaToken', tokens.accessToken);
+    localStorage.setItem('alphaRefreshToken', tokens.refreshToken);
+    localStorage.setItem('alphaData', JSON.stringify(alphaData));
+    setAlpha(alphaData);
+  };
+
+  const logout = () => {
+    localStorage.removeItem('alphaToken');
+    localStorage.removeItem('alphaRefreshToken');
+    localStorage.removeItem('alphaData');
+    setAlpha(null);
+  };
+
+  if (loading) {
+    return <div className="loading-screen">Loading...</div>;
+  }
+
+  return (
+    <AuthContext.Provider value={{ alpha, login, logout, isAuthenticated: !!alpha }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+// Protected Route
+function ProtectedRoute({ children }) {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? children : <Navigate to="/login" />;
+}
+
+// Login Page
+function LoginPage() {
+  const [step, setStep] = useState('credentials');
+  const [phone, setPhone] = useState('');
+  const [collegeId, setCollegeId] = useState('');
+  const [otp, setOtp] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [devOtp, setDevOtp] = useState('');
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSendOtp = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const res = await api.post('/alpha-auth/otp/send', { phone, collegeId });
+      setDevOtp(res.data.otp || '');
+      setStep('otp');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to send OTP');
+    }
+    setLoading(false);
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const res = await api.post('/alpha-auth/otp/verify', { phone, collegeId, otp });
+      login(res.data.alpha, res.data.tokens);
+      navigate('/');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Invalid OTP');
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="login-container">
+      <div className="login-card glass">
+        <div className="login-header">
+          <h1>⚡ Alpha Dashboard</h1>
+          <p>CollegePaglu Freelancer Portal</p>
+        </div>
+
+        {error && <div className="error-message">{error}</div>}
+
+        {step === 'credentials' ? (
+          <form onSubmit={handleSendOtp}>
+            <div className="form-group">
+              <label>Phone Number</label>
+              <input
+                type="tel"
+                placeholder="+919876543210"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>College ID</label>
+              <input
+                type="text"
+                placeholder="ALPHA001"
+                value={collegeId}
+                onChange={(e) => setCollegeId(e.target.value)}
+                required
+              />
+            </div>
+            <button type="submit" className="btn-primary" disabled={loading}>
+              {loading ? 'Sending...' : 'Send OTP'}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleVerifyOtp}>
+            <div className="form-group">
+              <label>Enter OTP</label>
+              <input
+                type="text"
+                placeholder="123456"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                maxLength={6}
+                required
+              />
+              {devOtp && <small className="dev-otp">Dev OTP: {devOtp}</small>}
+            </div>
+            <button type="submit" className="btn-primary" disabled={loading}>
+              {loading ? 'Verifying...' : 'Verify & Login'}
+            </button>
+            <button type="button" className="btn-secondary" onClick={() => setStep('credentials')}>
+              Back
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Sidebar Component
+function Sidebar({ active }) {
+  const { alpha, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const menuItems = [
+    { id: 'dashboard', icon: '📊', label: 'Dashboard', path: '/' },
+    { id: 'profile', icon: '👤', label: 'Profile', path: '/profile' },
+    { id: 'assignments', icon: '📝', label: 'Assignments', path: '/assignments' },
+    { id: 'earnings', icon: '💰', label: 'Earnings', path: '/earnings' },
+    { id: 'bank', icon: '🏦', label: 'Bank Details', path: '/bank' },
+  ];
+
+  return (
+    <aside className="sidebar glass">
+      <div className="sidebar-header">
+        <h2>⚡ Alpha</h2>
+        <span className="alpha-name">{alpha?.userName || 'Welcome'}</span>
+        <span className={`status-badge ${alpha?.status}`}>{alpha?.status}</span>
+      </div>
+      <nav className="sidebar-nav">
+        {menuItems.map((item) => (
+          <a
+            key={item.id}
+            href={item.path}
+            className={`nav-item ${active === item.id ? 'active' : ''}`}
+            onClick={(e) => { e.preventDefault(); navigate(item.path); }}
+          >
+            <span className="nav-icon">{item.icon}</span>
+            <span className="nav-label">{item.label}</span>
+          </a>
+        ))}
+      </nav>
+      <button className="logout-btn" onClick={logout}>
+        🚪 Logout
+      </button>
+    </aside>
+  );
+}
+
+// Dashboard Page
+function DashboardPage() {
+  const { alpha } = useAuth();
+
+  return (
+    <div className="page-container">
+      <Sidebar active="dashboard" />
+      <main className="main-content">
+        <h1>Welcome, {alpha?.userName || 'Alpha'}! 👋</h1>
+        <div className="stats-grid">
+          <div className="stat-card glass earnings">
+            <h3>💰 Total Earnings</h3>
+            <div className="stat-value">₹{alpha?.earnings?.total || 0}</div>
+            <div className="stat-detail">Lifetime earnings</div>
+          </div>
+          <div className="stat-card glass pending">
+            <h3>⏳ Pending</h3>
+            <div className="stat-value">₹{alpha?.earnings?.pending || 0}</div>
+            <div className="stat-detail">Awaiting release</div>
+          </div>
+          <div className="stat-card glass withdrawn">
+            <h3>✅ Withdrawn</h3>
+            <div className="stat-value">₹{alpha?.earnings?.withdrawn || 0}</div>
+            <div className="stat-detail">Successfully transferred</div>
+          </div>
+          <div className="stat-card glass completed">
+            <h3>📝 Completed</h3>
+            <div className="stat-value">{alpha?.completedAssignments || 0}</div>
+            <div className="stat-detail">Assignments done</div>
+          </div>
+          <div className="stat-card glass rating">
+            <h3>⭐ Rating</h3>
+            <div className="stat-value">{alpha?.rating?.toFixed(1) || '0.0'}</div>
+            <div className="stat-detail">From {alpha?.totalRatings || 0} reviews</div>
+          </div>
+          <div className="stat-card glass status">
+            <h3>🔖 Status</h3>
+            <div className="stat-value capitalize">{alpha?.status || 'unknown'}</div>
+            <div className="stat-detail">{alpha?.isAvailable ? 'Available' : 'Unavailable'}</div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+// Profile Page
+function ProfilePage() {
+  const { alpha } = useAuth();
+
+  return (
+    <div className="page-container">
+      <Sidebar active="profile" />
+      <main className="main-content">
+        <h1>My Profile</h1>
+        <div className="profile-card glass">
+          <div className="profile-header">
+            <div className="profile-avatar">
+              {alpha?.userAvatar ? (
+                <img src={alpha.userAvatar} alt="Avatar" />
+              ) : (
+                <div className="avatar-placeholder">⚡</div>
+              )}
+            </div>
+            <div className="profile-info">
+              <h2>{alpha?.userName || 'Alpha User'}</h2>
+              <p className="phone">{alpha?.phone}</p>
+              <span className={`badge ${alpha?.status}`}>{alpha?.status}</span>
+            </div>
+          </div>
+          <div className="profile-details">
+            <div className="detail-row">
+              <span className="label">College ID</span>
+              <span className="value">{alpha?.collegeId}</span>
+            </div>
+            <div className="detail-row">
+              <span className="label">Skills</span>
+              <span className="value">{alpha?.skills?.join(', ') || 'Not specified'}</span>
+            </div>
+            <div className="detail-row">
+              <span className="label">Bio</span>
+              <span className="value">{alpha?.bio || 'No bio added'}</span>
+            </div>
+            <div className="detail-row">
+              <span className="label">Available</span>
+              <span className="value">{alpha?.isAvailable ? 'Yes ✅' : 'No ❌'}</span>
+            </div>
+            <div className="detail-row">
+              <span className="label">Min Budget</span>
+              <span className="value">₹{alpha?.minBudget || 0}</span>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+// Assignments Page
+function AssignmentsPage() {
+  const [assignments, setAssignments] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAssignments = async () => {
+      try {
+        const res = await api.get('/alphas/assignments');
+        setAssignments(res.data || []);
+      } catch (err) {
+        console.error('Failed to fetch assignments:', err);
+      }
+      setLoading(false);
+    };
+    fetchAssignments();
+  }, []);
+
+  const handleAccept = async (id) => {
+    try {
+      await api.post(`/alphas/assignments/${id}/accept`);
+      setAssignments(assignments.map(a => 
+        a._id === id ? { ...a, status: 'in_progress' } : a
+      ));
+    } catch (err) {
+      alert('Failed to accept assignment');
+    }
+  };
+
+  return (
+    <div className="page-container">
+      <Sidebar active="assignments" />
+      <main className="main-content">
+        <h1>My Assignments</h1>
+        {loading ? (
+          <div className="loading">Loading assignments...</div>
+        ) : (
+          <div className="assignments-list">
+            {assignments.length === 0 ? (
+              <div className="empty-state glass">
+                <p>📝 No assignments yet</p>
+                <small>New assignments will appear here when assigned to you</small>
+              </div>
+            ) : assignments.map((assignment) => (
+              <div key={assignment._id} className="assignment-card glass">
+                <div className="assignment-header">
+                  <h3>{assignment.title}</h3>
+                  <span className={`badge ${assignment.status}`}>{assignment.status}</span>
+                </div>
+                <p className="assignment-desc">{assignment.description}</p>
+                <div className="assignment-meta">
+                  <span>💰 ₹{assignment.agreedPrice || assignment.budget}</span>
+                  <span>📅 Due: {new Date(assignment.dueDate).toLocaleDateString()}</span>
+                  <span>📁 {assignment.type}</span>
+                </div>
+                {assignment.status === 'assigned' && (
+                  <button className="btn-primary" onClick={() => handleAccept(assignment._id)}>
+                    Accept Assignment
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+// Earnings Page
+function EarningsPage() {
+  const { alpha } = useAuth();
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchEarnings = async () => {
+      try {
+        const res = await api.get('/alphas/earnings');
+        setPayments(res.data.recentPayments || []);
+      } catch (err) {
+        console.error('Failed to fetch earnings:', err);
+      }
+      setLoading(false);
+    };
+    fetchEarnings();
+  }, []);
+
+  return (
+    <div className="page-container">
+      <Sidebar active="earnings" />
+      <main className="main-content">
+        <h1>Earnings & Payments</h1>
+        
+        <div className="earnings-summary glass">
+          <div className="summary-item">
+            <span className="label">Total Earnings</span>
+            <span className="value">₹{alpha?.earnings?.total || 0}</span>
+          </div>
+          <div className="summary-item">
+            <span className="label">Pending</span>
+            <span className="value pending">₹{alpha?.earnings?.pending || 0}</span>
+          </div>
+          <div className="summary-item">
+            <span className="label">Withdrawn</span>
+            <span className="value success">₹{alpha?.earnings?.withdrawn || 0}</span>
+          </div>
+        </div>
+
+        <h2>Payment History</h2>
+        {loading ? (
+          <div className="loading">Loading payments...</div>
+        ) : (
+          <div className="table-container glass">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Amount</th>
+                  <th>Net Amount</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payments.length === 0 ? (
+                  <tr><td colSpan="4">No payment history</td></tr>
+                ) : payments.map((payment) => (
+                  <tr key={payment._id}>
+                    <td>{new Date(payment.createdAt).toLocaleDateString()}</td>
+                    <td>₹{payment.amount}</td>
+                    <td>₹{payment.netAmount}</td>
+                    <td><span className={`badge ${payment.status}`}>{payment.status}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+// Bank Details Page
+function BankPage() {
+  const { alpha } = useAuth();
+  const [formData, setFormData] = useState({
+    accountNumber: '',
+    ifscCode: '',
+    bankName: '',
+    accountHolderName: ''
+  });
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.put('/alphas/bank-details', formData);
+      alert('Bank details updated successfully!');
+    } catch (err) {
+      alert('Failed to update bank details');
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div className="page-container">
+      <Sidebar active="bank" />
+      <main className="main-content">
+        <h1>Bank Details</h1>
+        
+        <div className="bank-info glass">
+          <h3>Current Bank Details</h3>
+          <div className="detail-row">
+            <span className="label">Bank Name</span>
+            <span className="value">{alpha?.bankDetails?.bankName || 'Not set'}</span>
+          </div>
+          <div className="detail-row">
+            <span className="label">Account Holder</span>
+            <span className="value">{alpha?.bankDetails?.accountHolderName || 'Not set'}</span>
+          </div>
+          <div className="detail-row">
+            <span className="label">Verified</span>
+            <span className="value">{alpha?.bankDetails?.isVerified ? '✅ Yes' : '❌ No'}</span>
+          </div>
+        </div>
+
+        <div className="bank-form glass">
+          <h3>Update Bank Details</h3>
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label>Account Number</label>
+              <input
+                type="text"
+                value={formData.accountNumber}
+                onChange={(e) => setFormData({...formData, accountNumber: e.target.value})}
+                placeholder="Enter account number"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>IFSC Code</label>
+              <input
+                type="text"
+                value={formData.ifscCode}
+                onChange={(e) => setFormData({...formData, ifscCode: e.target.value})}
+                placeholder="ABCD0001234"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Bank Name</label>
+              <input
+                type="text"
+                value={formData.bankName}
+                onChange={(e) => setFormData({...formData, bankName: e.target.value})}
+                placeholder="State Bank of India"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Account Holder Name</label>
+              <input
+                type="text"
+                value={formData.accountHolderName}
+                onChange={(e) => setFormData({...formData, accountHolderName: e.target.value})}
+                placeholder="As per bank records"
+                required
+              />
+            </div>
+            <button type="submit" className="btn-primary" disabled={saving}>
+              {saving ? 'Saving...' : 'Update Bank Details'}
+            </button>
+          </form>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+// Main App
+function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+          <Route path="/assignments" element={<ProtectedRoute><AssignmentsPage /></ProtectedRoute>} />
+          <Route path="/earnings" element={<ProtectedRoute><EarningsPage /></ProtectedRoute>} />
+          <Route path="/bank" element={<ProtectedRoute><BankPage /></ProtectedRoute>} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
+  );
+}
+
+export default App;
