@@ -88,11 +88,12 @@ function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await api.post('/alpha-auth/otp/send', { phone, collegeId });
+      const res = await api.post('/auth/otp/send', { phone, collegeId });
       setDevOtp(res.data.otp || '');
       setStep('otp');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to send OTP');
+      console.error('OTP Error:', err.response?.data);
     }
     setLoading(false);
   };
@@ -102,8 +103,8 @@ function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await api.post('/alpha-auth/otp/verify', { phone, collegeId, otp });
-      login(res.data.alpha, res.data.tokens);
+      const res = await api.post('/auth/otp/verify', { phone, collegeId, otp });
+      login(res.data.user, res.data.tokens);
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid OTP');
@@ -333,7 +334,7 @@ function AssignmentsPage() {
   const handleAccept = async (id) => {
     try {
       await api.post(`/alphas/assignments/${id}/accept`);
-      setAssignments(assignments.map(a => 
+      setAssignments(assignments.map(a =>
         a._id === id ? { ...a, status: 'in_progress' } : a
       ));
     } catch (err) {
@@ -405,7 +406,7 @@ function EarningsPage() {
       <Sidebar active="earnings" />
       <main className="main-content">
         <h1>Earnings & Payments</h1>
-        
+
         <div className="earnings-summary glass">
           <div className="summary-item">
             <span className="label">Total Earnings</span>
@@ -483,7 +484,7 @@ function BankPage() {
       <Sidebar active="bank" />
       <main className="main-content">
         <h1>Bank Details</h1>
-        
+
         <div className="bank-info glass">
           <h3>Current Bank Details</h3>
           <div className="detail-row">
@@ -508,7 +509,7 @@ function BankPage() {
               <input
                 type="text"
                 value={formData.accountNumber}
-                onChange={(e) => setFormData({...formData, accountNumber: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
                 placeholder="Enter account number"
                 required
               />
@@ -518,7 +519,7 @@ function BankPage() {
               <input
                 type="text"
                 value={formData.ifscCode}
-                onChange={(e) => setFormData({...formData, ifscCode: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, ifscCode: e.target.value })}
                 placeholder="ABCD0001234"
                 required
               />
@@ -528,7 +529,7 @@ function BankPage() {
               <input
                 type="text"
                 value={formData.bankName}
-                onChange={(e) => setFormData({...formData, bankName: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
                 placeholder="State Bank of India"
                 required
               />
@@ -538,7 +539,7 @@ function BankPage() {
               <input
                 type="text"
                 value={formData.accountHolderName}
-                onChange={(e) => setFormData({...formData, accountHolderName: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, accountHolderName: e.target.value })}
                 placeholder="As per bank records"
                 required
               />
