@@ -104,8 +104,14 @@ function LoginPage() {
     setLoading(true);
     try {
       const res = await api.post('/auth/otp/verify', { phone, collegeId, otp });
-      login(res.data.user, res.data.tokens);
-      navigate('/');
+      // Response structure is { success: true, data: { user, tokens } }
+      const { user, tokens } = res.data.data || res.data;
+      if (user && tokens) {
+        login(user, tokens);
+        navigate('/');
+      } else {
+        setError('Invalid response from server');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid OTP');
     }
@@ -314,6 +320,7 @@ function ProfilePage() {
 }
 
 // Assignments Page
+// Assignments Page
 function AssignmentsPage() {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -322,7 +329,7 @@ function AssignmentsPage() {
     const fetchAssignments = async () => {
       try {
         const res = await api.get('/alphas/assignments');
-        setAssignments(res.data || []);
+        setAssignments(res.data.data || []);
       } catch (err) {
         console.error('Failed to fetch assignments:', err);
       }
@@ -331,15 +338,34 @@ function AssignmentsPage() {
     fetchAssignments();
   }, []);
 
-  const handleAccept = async (id) => {
+  // Start Work (assigned → in_progress)
+  const handleStartWork = async (id) => {
     try {
       await api.post(`/alphas/assignments/${id}/accept`);
       setAssignments(assignments.map(a =>
-        a._id === id ? { ...a, status: 'in_progress' } : a
+        a._id === id ? { ...a, status: "in_progress" } : a
       ));
     } catch (err) {
-      alert('Failed to accept assignment');
+      alert("Failed to start work");
     }
+  };
+
+  // Mark Completed (in_progress → completed)
+  const handleComplete = async (id) => {
+    try {
+      await api.post(`/alphas/assignments/${id}/complete`);
+      setAssignments(assignments.map(a =>
+        a._id === id ? { ...a, status: "completed" } : a
+      ));
+    } catch (err) {
+      alert("Failed to complete assignment");
+    }
+  };
+
+  const getRequesterName = (requester) => {
+    if (!requester) return 'Unknown';
+    return requester.displayName ||
+      (requester.firstName ? `${requester.firstName} ${requester.lastName || ''}`.trim() : 'Unknown');
   };
 
   return (
@@ -347,33 +373,98 @@ function AssignmentsPage() {
       <Sidebar active="assignments" />
       <main className="main-content">
         <h1>My Assignments</h1>
+
         {loading ? (
           <div className="loading">Loading assignments...</div>
         ) : (
           <div className="assignments-list">
+
             {assignments.length === 0 ? (
               <div className="empty-state glass">
                 <p>📝 No assignments yet</p>
-                <small>New assignments will appear here when assigned to you</small>
+                <small>New assignments will appear here when assigned</small>
               </div>
             ) : assignments.map((assignment) => (
+
               <div key={assignment._id} className="assignment-card glass">
+
                 <div className="assignment-header">
                   <h3>{assignment.title}</h3>
-                  <span className={`badge ${assignment.status}`}>{assignment.status}</span>
+                  <span className={`badge ${assignment.status}`}>
+                    {assignment.status.replace("_", " ")}
+                  </span>
                 </div>
+
+                <div className="assignment-requester">
+                  <span className="label">Requested by:</span>
+                  <div className="requester-info">
+                    <span className="value">{getRequesterName(assignment.requester)}</span>
+                    {assignment.requester?.phone && (
+                      <span className="phone-value">📞 {assignment.requester.phone}</span>
+                    )}
+                  </div>
+                </div>
+
                 <p className="assignment-desc">{assignment.description}</p>
+
+                {/* Attachments Section */}
+                {assignment.attachments && assignment.attachments.length > 0 && (
+                  <div className="assignment-attachments">
+                    <span className="label">Attachments:</span>
+                    <div className="attachment-list">
+                      {assignment.attachments.map((url, index) => (
+                        <a
+                          key={index}
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="attachment-link"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          📄 View File {index + 1}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="assignment-meta">
-                  <span>💰 ₹{assignment.agreedPrice || assignment.budget}</span>
-                  <span>📅 Due: {new Date(assignment.dueDate).toLocaleDateString()}</span>
+                  <span>💰 ₹{assignment.agreedPrice || assignment.budget?.min || 0}</span>
+                  <span>📅 Due: {new Date(assignment.deadline).toLocaleDateString()}</span>
                   <span>📁 {assignment.type}</span>
                 </div>
-                {assignment.status === 'assigned' && (
-                  <button className="btn-primary" onClick={() => handleAccept(assignment._id)}>
-                    Accept Assignment
-                  </button>
-                )}
+
+                {/* ACTION BUTTONS */}
+                <div className="assignment-actions">
+
+                  {assignment.status === "assigned" && (
+                    <button
+                      className="status-btn start"
+                      onClick={() => handleStartWork(assignment._id)}
+                    >
+                      ▶ Start Work
+                    </button>
+                  )}
+
+                  {assignment.status === "in_progress" && (
+                    <button
+                      className="status-btn complete"
+                      onClick={() => handleComplete(assignment._id)}
+                    >
+                      ✅ Mark Completed
+                    </button>
+                  )}
+
+                  {assignment.status === "completed" && (
+                    <button className="status-btn done" disabled>
+                      ✔ Completed
+                    </button>
+                  )}
+
+                </div>
+
               </div>
+
             ))}
           </div>
         )}
@@ -381,6 +472,7 @@ function AssignmentsPage() {
     </div>
   );
 }
+
 
 // Earnings Page
 function EarningsPage() {

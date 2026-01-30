@@ -426,6 +426,29 @@ body {
   transform: translateX(4px);
 }
 
+.assignment-requester {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.requester-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.phone-value {
+  color: var(--primary);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.assignment-header h3 {
+  font-size: 1.2rem;
+}
+
 .assignment-header {
   display: flex;
   justify-content: space-between;
@@ -607,4 +630,83 @@ tbody tr:hover {
   .earnings-summary {
     grid-template-columns: 1fr;
   }
+}
+
+/* Attachments */
+.assignment-attachments {
+  margin: 1rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.attachment-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.attachment-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
+  padding: 6px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.attachment-link:hover {
+  background: rgba(59, 130, 246, 0.2);
+  transform: translateY(-2px);
+}
+
+/* Status Buttons */
+
+.assignment-actions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.status-btn {
+  padding: 0.7rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* Start Work */
+.status-btn.start {
+  background: linear-gradient(135deg, #06b6d4, #3b82f6);
+  color: white;
+}
+
+.status-btn.start:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(59, 130, 246, 0.4);
+}
+
+/* Complete */
+.status-btn.complete {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.status-btn.complete:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(16, 185, 129, 0.4);
+}
+
+/* Done */
+.status-btn.done {
+  background: rgba(255, 255, 255, 0.1);
+  color: #10b981;
+  cursor: not-allowed;
 }
