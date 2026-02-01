@@ -395,15 +395,23 @@ function AssignmentsPage() {
                   </span>
                 </div>
 
-                <div className="assignment-requester">
-                  <span className="label">Requested by:</span>
-                  <div className="requester-info">
-                    <span className="value">{getRequesterName(assignment.requester)}</span>
-                    {assignment.requester?.phone && (
-                      <span className="phone-value">📞 {assignment.requester.phone}</span>
-                    )}
+                {/* Only show requester details after completion (for delivery) */}
+                {assignment.status === "completed" ? (
+                  <div className="assignment-requester">
+                    <span className="label">Deliver to:</span>
+                    <div className="requester-info">
+                      <span className="value">{getRequesterName(assignment.requester)}</span>
+                      {assignment.requester?.phone && (
+                        <span className="phone-value">📞 {assignment.requester.phone}</span>
+                      )}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="assignment-requester">
+                    <span className="label">Requester:</span>
+                    <span className="value hidden-info">🔒 Details available after completion</span>
+                  </div>
+                )}
 
                 <p className="assignment-desc">{assignment.description}</p>
 
