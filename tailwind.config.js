@@ -7,14 +7,17 @@ export default {
     theme: {
         extend: {
             colors: {
-                background: 'var(--color-base-white)',
-                surface: 'var(--color-base-100)',
-                muted: 'var(--color-base-200)',
-                primary: 'var(--color-primary)',
-                dark: 'var(--color-dark)',
-                'base-white': 'var(--color-base-white)',
-                'base-100': 'var(--color-base-100)',
-                'base-200': 'var(--color-base-200)',
+                background: 'rgb(var(--color-base-white) / <alpha-value>)',
+                surface: 'rgb(var(--color-base-100) / <alpha-value>)',
+                muted: 'rgb(var(--color-base-200) / <alpha-value>)',
+                primary: 'rgb(var(--color-primary) / <alpha-value>)',
+                dark: 'rgb(var(--color-dark) / <alpha-value>)',
+                'base-white': 'rgb(var(--color-base-white) / <alpha-value>)',
+                'base-100': 'rgb(var(--color-base-100) / <alpha-value>)',
+                'base-200': 'rgb(var(--color-base-200) / <alpha-value>)',
+                success: 'rgb(var(--color-success) / <alpha-value>)',
+                warning: 'rgb(var(--color-warning) / <alpha-value>)',
+                error: 'rgb(var(--color-error) / <alpha-value>)',
             },
             fontFamily: {
                 sans: ['Inter', 'sans-serif'],

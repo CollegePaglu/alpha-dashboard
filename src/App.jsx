@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-route
 import axios from 'axios';
 import './App.css';
 import SnacksCatalog from './pages/SnacksCatalog';
-import { LayoutDashboard, User, CheckSquare, Wallet, Building2, LogOut, Zap } from 'lucide-react';
+import { LayoutDashboard, User, CheckSquare, Wallet, Building2, LogOut, Zap, Search } from 'lucide-react';
 import clsx from 'clsx';
 
 // API Configuration
@@ -123,7 +123,7 @@ function LoginPage() {
 
   return (
     <div className="login-container">
-      <div className="login-card glass">
+      <div className="login-card">
         <div className="login-header">
           <h1>⚡ Alpha Dashboard</h1>
           <p>CollegePaglu Freelancer Portal</p>
@@ -137,6 +137,7 @@ function LoginPage() {
               <label>Phone Number</label>
               <input
                 type="tel"
+                className="input-field"
                 placeholder="+919876543210"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
@@ -147,6 +148,7 @@ function LoginPage() {
               <label>College ID</label>
               <input
                 type="text"
+                className="input-field"
                 placeholder="ALPHA001"
                 value={collegeId}
                 onChange={(e) => setCollegeId(e.target.value)}
@@ -163,6 +165,7 @@ function LoginPage() {
               <label>Enter OTP</label>
               <input
                 type="text"
+                className="input-field"
                 placeholder="123456"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
@@ -198,30 +201,31 @@ function Sidebar({ active }) {
   ];
 
   return (
-    <aside className="w-72 fixed inset-y-0 left-0 bg-base-100/30 backdrop-blur-xl border-r border-base-200 flex flex-col z-50">
-      <div className="h-24 flex items-center px-8 border-b border-base-200/50">
-        <h2 className="text-2xl font-display font-medium text-dark flex items-center gap-2">
-          <Zap className="w-6 h-6 text-primary" />
-          <span className="text-dark">Alpha</span>
+    <aside className="sidebar">
+      <div className="p-6 border-b border-base-200">
+        <h2 className="text-2xl font-display font-medium text-primary flex items-center gap-2">
+          <Zap className="w-6 h-6" />
+          <span>Alpha</span>
         </h2>
       </div>
 
-      <div className="px-8 py-6">
-        <div className="flex items-center gap-4 p-4 bg-white/60 rounded-2xl border border-white/50 shadow-sm mb-6">
+      <div className="p-6">
+        <div className="profile-header mb-0">
           <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold text-lg">
             {alpha?.userName?.[0] || 'A'}
           </div>
           <div className="overflow-hidden">
             <p className="font-bold text-dark text-sm truncate">{alpha?.userName || 'Welcome'}</p>
             <div className="flex items-center mt-1">
-              <span className="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
-              <p className="text-xs text-primary/60 uppercase tracking-widest font-medium">{alpha?.status || 'Active'}</p>
+              <span className={`status-badge ${alpha?.status === 'active' ? 'verified' : 'pending'} text-[10px] px-2 py-0.5`}>
+                {alpha?.status || 'Active'}
+              </span>
             </div>
           </div>
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-6 space-y-2 pb-6 no-scrollbar">
+      <nav className="flex-1 overflow-y-auto px-4 space-y-1 pb-6">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = active === item.id;
@@ -231,25 +235,25 @@ function Sidebar({ active }) {
               key={item.id}
               onClick={() => navigate(item.path)}
               className={clsx(
-                "w-full flex items-center px-5 py-3.5 text-sm font-medium rounded-2xl transition-all duration-300 group relative",
+                "w-full flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200",
                 isActive
-                  ? "bg-base-white border border-base-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] text-dark"
-                  : "text-primary/70 hover:bg-white/40 hover:text-primary border border-transparent"
+                  ? "bg-primary text-white shadow-md"
+                  : "text-gray-600 hover:bg-surface hover:text-primary"
               )}
             >
-              <Icon className={clsx("w-5 h-5 mr-4 transition-colors", isActive ? "text-dark" : "text-primary/50 group-hover:text-primary/80")} />
-              <span className={clsx(isActive ? "font-semibold" : "font-medium")}>{item.label}</span>
+              <Icon className={clsx("w-5 h-5 mr-3 transition-colors", isActive ? "text-white" : "text-gray-400 group-hover:text-primary")} />
+              <span>{item.label}</span>
             </button>
           );
         })}
       </nav>
 
-      <div className="p-6 border-t border-base-200/50">
+      <div className="p-6 border-t border-base-200">
         <button
-          className="w-full flex items-center px-5 py-3 text-red-700/80 hover:bg-red-50 rounded-xl transition-all duration-300 text-sm font-medium"
+          className="w-full flex items-center px-4 py-3 text-error hover:bg-error/10 rounded-xl transition-all duration-200 text-sm font-medium"
           onClick={logout}
         >
-          <LogOut className="w-5 h-5 mr-3 opacity-70" />
+          <LogOut className="w-5 h-5 mr-3" />
           Logout
         </button>
       </div>
@@ -267,34 +271,34 @@ function DashboardPage() {
       <main className="main-content">
         <h1>Welcome, {alpha?.userName || 'Alpha'}! 👋</h1>
         <div className="stats-grid">
-          <div className="stat-card glass earnings">
+          <div className="stat-card">
             <h3>💰 Total Earnings</h3>
             <div className="stat-value">₹{alpha?.earnings?.total || 0}</div>
             <div className="stat-detail">Lifetime earnings</div>
           </div>
-          <div className="stat-card glass pending">
+          <div className="stat-card">
             <h3>⏳ Pending</h3>
-            <div className="stat-value">₹{alpha?.earnings?.pending || 0}</div>
+            <div className="stat-value text-warning">₹{alpha?.earnings?.pending || 0}</div>
             <div className="stat-detail">Awaiting release</div>
           </div>
-          <div className="stat-card glass withdrawn">
+          <div className="stat-card">
             <h3>✅ Withdrawn</h3>
-            <div className="stat-value">₹{alpha?.earnings?.withdrawn || 0}</div>
+            <div className="stat-value text-success">₹{alpha?.earnings?.withdrawn || 0}</div>
             <div className="stat-detail">Successfully transferred</div>
           </div>
-          <div className="stat-card glass completed">
+          <div className="stat-card">
             <h3>📝 Completed</h3>
             <div className="stat-value">{alpha?.completedAssignments || 0}</div>
             <div className="stat-detail">Assignments done</div>
           </div>
-          <div className="stat-card glass rating">
+          <div className="stat-card">
             <h3>⭐ Rating</h3>
             <div className="stat-value">{alpha?.rating?.toFixed(1) || '0.0'}</div>
             <div className="stat-detail">From {alpha?.totalRatings || 0} reviews</div>
           </div>
-          <div className="stat-card glass status">
+          <div className="stat-card">
             <h3>🔖 Status</h3>
-            <div className="stat-value capitalize">{alpha?.status || 'unknown'}</div>
+            <div className="stat-value capitalize text-lg mt-2">{alpha?.status || 'unknown'}</div>
             <div className="stat-detail">{alpha?.isAvailable ? 'Available' : 'Unavailable'}</div>
           </div>
         </div>
@@ -312,22 +316,24 @@ function ProfilePage() {
       <Sidebar active="profile" />
       <main className="main-content">
         <h1>My Profile</h1>
-        <div className="profile-card glass">
+        <div className="profile-card">
           <div className="profile-header">
-            <div className="profile-avatar">
+            <div className="profile-avatar text-4xl">
               {alpha?.userAvatar ? (
-                <img src={alpha.userAvatar} alt="Avatar" />
+                <img src={alpha.userAvatar} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
-                <div className="avatar-placeholder">⚡</div>
+                alpha?.userName?.[0] || 'A'
               )}
             </div>
             <div className="profile-info">
               <h2>{alpha?.userName || 'Alpha User'}</h2>
-              <p className="phone">{alpha?.phone}</p>
-              <span className={`badge ${alpha?.status}`}>{alpha?.status}</span>
+              <p className="text-gray-500 mb-2">{alpha?.phone}</p>
+              <span className={`status-badge ${alpha?.status === 'active' ? 'verified' : 'pending'}`}>
+                {alpha?.status}
+              </span>
             </div>
           </div>
-          <div className="profile-details">
+          <div className="profile-details space-y-0">
             <div className="detail-row">
               <span className="label">College ID</span>
               <span className="value">{alpha?.collegeId}</span>
@@ -342,7 +348,9 @@ function ProfilePage() {
             </div>
             <div className="detail-row">
               <span className="label">Available</span>
-              <span className="value">{alpha?.isAvailable ? 'Yes ✅' : 'No ❌'}</span>
+              <span className={`value ${alpha?.isAvailable ? 'text-success' : 'text-error'}`}>
+                {alpha?.isAvailable ? 'Yes ✅' : 'No ❌'}
+              </span>
             </div>
             <div className="detail-row">
               <span className="label">Min Budget</span>
@@ -355,7 +363,6 @@ function ProfilePage() {
   );
 }
 
-// Assignments Page
 // Assignments Page
 function AssignmentsPage() {
   const [assignments, setAssignments] = useState([]);
@@ -416,17 +423,17 @@ function AssignmentsPage() {
           <div className="assignments-list">
 
             {assignments.length === 0 ? (
-              <div className="empty-state glass">
+              <div className="empty-state">
                 <p>📝 No assignments yet</p>
                 <small>New assignments will appear here when assigned</small>
               </div>
             ) : assignments.map((assignment) => (
 
-              <div key={assignment._id} className="assignment-card glass">
+              <div key={assignment._id} className="assignment-card">
 
                 <div className="assignment-header">
                   <h3>{assignment.title}</h3>
-                  <span className={`badge ${assignment.status}`}>
+                  <span className={`status-badge ${assignment.status.replace("_", "")}`}>
                     {assignment.status.replace("_", " ")}
                   </span>
                 </div>
@@ -434,9 +441,9 @@ function AssignmentsPage() {
                 {/* Only show requester details after completion (for delivery) */}
                 {assignment.status === "completed" ? (
                   <div className="assignment-requester">
-                    <span className="label">Deliver to:</span>
+                    <span className="label font-semibold text-gray-500 text-sm">Deliver to:</span>
                     <div className="requester-info">
-                      <span className="value">{getRequesterName(assignment.requester)}</span>
+                      <span className="value font-medium">{getRequesterName(assignment.requester)}</span>
                       {assignment.requester?.phone && (
                         <span className="phone-value">📞 {assignment.requester.phone}</span>
                       )}
@@ -444,7 +451,7 @@ function AssignmentsPage() {
                   </div>
                 ) : (
                   <div className="assignment-requester">
-                    <span className="label">Requester:</span>
+                    <span className="label font-semibold text-gray-500 text-sm">Requester:</span>
                     <span className="value hidden-info">🔒 Details available after completion</span>
                   </div>
                 )}
@@ -454,7 +461,7 @@ function AssignmentsPage() {
                 {/* Attachments Section */}
                 {assignment.attachments && assignment.attachments.length > 0 && (
                   <div className="assignment-attachments">
-                    <span className="label">Attachments:</span>
+                    <span className="label font-semibold text-gray-500 text-sm">Attachments:</span>
                     <div className="attachment-list">
                       {assignment.attachments.map((url, index) => (
                         <a
@@ -472,18 +479,18 @@ function AssignmentsPage() {
                   </div>
                 )}
 
-                <div className="assignment-meta">
-                  <span>💰 ₹{assignment.agreedPrice || assignment.budget?.min || 0}</span>
-                  <span>📅 Due: {new Date(assignment.deadline).toLocaleDateString()}</span>
-                  <span>📁 {assignment.type}</span>
+                <div className="assignment-meta flex gap-6 text-sm text-gray-500 mt-4 mb-4">
+                  <span className="flex items-center gap-1">💰 ₹{assignment.agreedPrice || assignment.budget?.min || 0}</span>
+                  <span className="flex items-center gap-1">📅 Due: {new Date(assignment.deadline).toLocaleDateString()}</span>
+                  <span className="flex items-center gap-1">📁 {assignment.type}</span>
                 </div>
 
                 {/* ACTION BUTTONS */}
-                <div className="assignment-actions">
+                <div className="assignment-actions flex justify-end gap-3">
 
                   {assignment.status === "assigned" && (
                     <button
-                      className="status-btn start"
+                      className="btn-primary py-2 px-4 text-sm"
                       onClick={() => handleStartWork(assignment._id)}
                     >
                       ▶ Start Work
@@ -492,7 +499,7 @@ function AssignmentsPage() {
 
                   {assignment.status === "in_progress" && (
                     <button
-                      className="status-btn complete"
+                      className="btn-primary bg-success border-success hover:bg-success/90 py-2 px-4 text-sm"
                       onClick={() => handleComplete(assignment._id)}
                     >
                       ✅ Mark Completed
@@ -500,7 +507,7 @@ function AssignmentsPage() {
                   )}
 
                   {assignment.status === "completed" && (
-                    <button className="status-btn done" disabled>
+                    <button className="btn-secondary py-2 px-4 text-sm cursor-not-allowed opacity-70" disabled>
                       ✔ Completed
                     </button>
                   )}
@@ -543,18 +550,18 @@ function EarningsPage() {
       <main className="main-content">
         <h1>Earnings & Payments</h1>
 
-        <div className="earnings-summary glass">
-          <div className="summary-item">
-            <span className="label">Total Earnings</span>
-            <span className="value">₹{alpha?.earnings?.total || 0}</span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="stat-card text-center">
+            <span className="block text-gray-500 mb-2 text-sm uppercase font-semibold">Total Earnings</span>
+            <span className="text-3xl font-display font-bold text-primary">₹{alpha?.earnings?.total || 0}</span>
           </div>
-          <div className="summary-item">
-            <span className="label">Pending</span>
-            <span className="value pending">₹{alpha?.earnings?.pending || 0}</span>
+          <div className="stat-card text-center">
+            <span className="block text-gray-500 mb-2 text-sm uppercase font-semibold">Pending</span>
+            <span className="text-3xl font-display font-bold text-warning">₹{alpha?.earnings?.pending || 0}</span>
           </div>
-          <div className="summary-item">
-            <span className="label">Withdrawn</span>
-            <span className="value success">₹{alpha?.earnings?.withdrawn || 0}</span>
+          <div className="stat-card text-center">
+            <span className="block text-gray-500 mb-2 text-sm uppercase font-semibold">Withdrawn</span>
+            <span className="text-3xl font-display font-bold text-success">₹{alpha?.earnings?.withdrawn || 0}</span>
           </div>
         </div>
 
@@ -562,7 +569,7 @@ function EarningsPage() {
         {loading ? (
           <div className="loading">Loading payments...</div>
         ) : (
-          <div className="table-container glass">
+          <div className="table-container">
             <table>
               <thead>
                 <tr>
@@ -574,13 +581,17 @@ function EarningsPage() {
               </thead>
               <tbody>
                 {payments.length === 0 ? (
-                  <tr><td colSpan="4">No payment history</td></tr>
+                  <tr><td colSpan="4" className="text-center py-8 text-gray-500">No payment history</td></tr>
                 ) : payments.map((payment) => (
                   <tr key={payment._id}>
                     <td>{new Date(payment.createdAt).toLocaleDateString()}</td>
                     <td>₹{payment.amount}</td>
                     <td>₹{payment.netAmount}</td>
-                    <td><span className={`badge ${payment.status}`}>{payment.status}</span></td>
+                    <td>
+                      <span className={`status-badge ${payment.status === 'completed' ? 'verified' : 'pending'}`}>
+                        {payment.status}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -621,69 +632,81 @@ function BankPage() {
       <main className="main-content">
         <h1>Bank Details</h1>
 
-        <div className="bank-info glass">
-          <h3>Current Bank Details</h3>
-          <div className="detail-row">
-            <span className="label">Bank Name</span>
-            <span className="value">{alpha?.bankDetails?.bankName || 'Not set'}</span>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="space-y-6">
+            <div className="profile-card">
+              <h3>Current Bank Details</h3>
+              <div className="profile-details mt-4">
+                <div className="detail-row">
+                  <span className="label">Bank Name</span>
+                  <span className="value">{alpha?.bankDetails?.bankName || 'Not set'}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="label">Account Holder</span>
+                  <span className="value">{alpha?.bankDetails?.accountHolderName || 'Not set'}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="label">Verified</span>
+                  <span className={`value ${alpha?.bankDetails?.isVerified ? 'text-success' : 'text-error'}`}>
+                    {alpha?.bankDetails?.isVerified ? '✅ Yes' : '❌ No'}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="detail-row">
-            <span className="label">Account Holder</span>
-            <span className="value">{alpha?.bankDetails?.accountHolderName || 'Not set'}</span>
-          </div>
-          <div className="detail-row">
-            <span className="label">Verified</span>
-            <span className="value">{alpha?.bankDetails?.isVerified ? '✅ Yes' : '❌ No'}</span>
-          </div>
-        </div>
 
-        <div className="bank-form glass">
-          <h3>Update Bank Details</h3>
-          <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label>Account Number</label>
-              <input
-                type="text"
-                value={formData.accountNumber}
-                onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
-                placeholder="Enter account number"
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>IFSC Code</label>
-              <input
-                type="text"
-                value={formData.ifscCode}
-                onChange={(e) => setFormData({ ...formData, ifscCode: e.target.value })}
-                placeholder="ABCD0001234"
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Bank Name</label>
-              <input
-                type="text"
-                value={formData.bankName}
-                onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
-                placeholder="State Bank of India"
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Account Holder Name</label>
-              <input
-                type="text"
-                value={formData.accountHolderName}
-                onChange={(e) => setFormData({ ...formData, accountHolderName: e.target.value })}
-                placeholder="As per bank records"
-                required
-              />
-            </div>
-            <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? 'Saving...' : 'Update Bank Details'}
-            </button>
-          </form>
+          <div className="profile-card">
+            <h3>Update Bank Details</h3>
+            <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+              <div className="form-group">
+                <label>Account Number</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={formData.accountNumber}
+                  onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
+                  placeholder="Enter account number"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>IFSC Code</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={formData.ifscCode}
+                  onChange={(e) => setFormData({ ...formData, ifscCode: e.target.value })}
+                  placeholder="ABCD0001234"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Bank Name</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={formData.bankName}
+                  onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+                  placeholder="State Bank of India"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Account Holder Name</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={formData.accountHolderName}
+                  onChange={(e) => setFormData({ ...formData, accountHolderName: e.target.value })}
+                  placeholder="As per bank records"
+                  required
+                />
+              </div>
+              <button type="submit" className="btn-primary" disabled={saving}>
+                {saving ? 'Saving...' : 'Update Bank Details'}
+              </button>
+            </form>
+          </div>
         </div>
       </main>
     </div>
