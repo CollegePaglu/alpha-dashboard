@@ -2,6 +2,9 @@ import { useState, useEffect, createContext, useContext } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './App.css';
+import SnacksCatalog from './pages/SnacksCatalog';
+import { LayoutDashboard, User, CheckSquare, Wallet, Building2, LogOut, Zap } from 'lucide-react';
+import clsx from 'clsx';
 
 // API Configuration
 const API_BASE = 'http://localhost:5000/api/v1';
@@ -187,36 +190,69 @@ function Sidebar({ active }) {
   const navigate = useNavigate();
 
   const menuItems = [
-    { id: 'dashboard', icon: '📊', label: 'Dashboard', path: '/' },
-    { id: 'profile', icon: '👤', label: 'Profile', path: '/profile' },
-    { id: 'assignments', icon: '📝', label: 'Assignments', path: '/assignments' },
-    { id: 'earnings', icon: '💰', label: 'Earnings', path: '/earnings' },
-    { id: 'bank', icon: '🏦', label: 'Bank Details', path: '/bank' },
+    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+    { id: 'profile', icon: User, label: 'Profile', path: '/profile' },
+    { id: 'assignments', icon: CheckSquare, label: 'Assignments', path: '/assignments' },
+    { id: 'earnings', icon: Wallet, label: 'Earnings', path: '/earnings' },
+    { id: 'bank', icon: Building2, label: 'Bank Details', path: '/bank' },
   ];
 
   return (
-    <aside className="sidebar glass">
-      <div className="sidebar-header">
-        <h2>⚡ Alpha</h2>
-        <span className="alpha-name">{alpha?.userName || 'Welcome'}</span>
-        <span className={`status-badge ${alpha?.status}`}>{alpha?.status}</span>
+    <aside className="w-72 fixed inset-y-0 left-0 bg-base-100/30 backdrop-blur-xl border-r border-base-200 flex flex-col z-50">
+      <div className="h-24 flex items-center px-8 border-b border-base-200/50">
+        <h2 className="text-2xl font-display font-medium text-dark flex items-center gap-2">
+          <Zap className="w-6 h-6 text-primary" />
+          <span className="text-dark">Alpha</span>
+        </h2>
       </div>
-      <nav className="sidebar-nav">
-        {menuItems.map((item) => (
-          <a
-            key={item.id}
-            href={item.path}
-            className={`nav-item ${active === item.id ? 'active' : ''}`}
-            onClick={(e) => { e.preventDefault(); navigate(item.path); }}
-          >
-            <span className="nav-icon">{item.icon}</span>
-            <span className="nav-label">{item.label}</span>
-          </a>
-        ))}
+
+      <div className="px-8 py-6">
+        <div className="flex items-center gap-4 p-4 bg-white/60 rounded-2xl border border-white/50 shadow-sm mb-6">
+          <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold text-lg">
+            {alpha?.userName?.[0] || 'A'}
+          </div>
+          <div className="overflow-hidden">
+            <p className="font-bold text-dark text-sm truncate">{alpha?.userName || 'Welcome'}</p>
+            <div className="flex items-center mt-1">
+              <span className="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
+              <p className="text-xs text-primary/60 uppercase tracking-widest font-medium">{alpha?.status || 'Active'}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <nav className="flex-1 overflow-y-auto px-6 space-y-2 pb-6 no-scrollbar">
+        {menuItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = active === item.id;
+
+          return (
+            <button
+              key={item.id}
+              onClick={() => navigate(item.path)}
+              className={clsx(
+                "w-full flex items-center px-5 py-3.5 text-sm font-medium rounded-2xl transition-all duration-300 group relative",
+                isActive
+                  ? "bg-base-white border border-base-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] text-dark"
+                  : "text-primary/70 hover:bg-white/40 hover:text-primary border border-transparent"
+              )}
+            >
+              <Icon className={clsx("w-5 h-5 mr-4 transition-colors", isActive ? "text-dark" : "text-primary/50 group-hover:text-primary/80")} />
+              <span className={clsx(isActive ? "font-semibold" : "font-medium")}>{item.label}</span>
+            </button>
+          );
+        })}
       </nav>
-      <button className="logout-btn" onClick={logout}>
-        🚪 Logout
-      </button>
+
+      <div className="p-6 border-t border-base-200/50">
+        <button
+          className="w-full flex items-center px-5 py-3 text-red-700/80 hover:bg-red-50 rounded-xl transition-all duration-300 text-sm font-medium"
+          onClick={logout}
+        >
+          <LogOut className="w-5 h-5 mr-3 opacity-70" />
+          Logout
+        </button>
+      </div>
     </aside>
   );
 }
@@ -666,6 +702,7 @@ function App() {
           <Route path="/assignments" element={<ProtectedRoute><AssignmentsPage /></ProtectedRoute>} />
           <Route path="/earnings" element={<ProtectedRoute><EarningsPage /></ProtectedRoute>} />
           <Route path="/bank" element={<ProtectedRoute><BankPage /></ProtectedRoute>} />
+          <Route path="/snacks" element={<ProtectedRoute><SnacksCatalog /></ProtectedRoute>} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
