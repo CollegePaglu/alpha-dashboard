@@ -3,11 +3,17 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-route
 import axios from 'axios';
 import './App.css';
 import SnacksCatalog from './pages/SnacksCatalog';
-import { LayoutDashboard, User, CheckSquare, Wallet, Building2, LogOut, Zap, Search } from 'lucide-react';
+import { LayoutDashboard, User, CheckSquare, Wallet, Building2, LogOut, Zap, Search, Loader, CheckCircle, Smartphone } from 'lucide-react';
 import clsx from 'clsx';
 
 // API Configuration
 const API_BASE = 'http://localhost:5000/api/v1';
+const SERVER_URL = 'http://localhost:5000';
+
+const getImageUrl = (path) => {
+  if (!path) return '';
+  return path.startsWith('http') ? path : `${SERVER_URL}${path}`;
+};
 
 // Create axios instance
 const api = axios.create({
@@ -211,11 +217,15 @@ function Sidebar({ active }) {
 
       <div className="p-6">
         <div className="profile-header mb-0">
-          <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold text-lg">
-            {alpha?.userName?.[0] || 'A'}
+          <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold text-lg overflow-hidden">
+            {alpha?.userAvatar ? (
+              <img src={getImageUrl(alpha.userAvatar)} alt="Avatar" className="w-full h-full object-cover" />
+            ) : (
+              alpha?.firstName?.[0] || alpha?.userName?.[0] || 'A'
+            )}
           </div>
           <div className="overflow-hidden">
-            <p className="font-bold text-dark text-sm truncate">{alpha?.userName || 'Welcome'}</p>
+            <p className="font-bold text-dark text-sm truncate">{alpha?.firstName ? `${alpha.firstName} ${alpha.lastName || ''}` : alpha?.userName || 'Welcome'}</p>
             <div className="flex items-center mt-1">
               <span className={`status-badge ${alpha?.status === 'active' ? 'verified' : 'pending'} text-[10px] px-2 py-0.5`}>
                 {alpha?.status || 'Active'}
@@ -261,33 +271,111 @@ function Sidebar({ active }) {
   );
 }
 
+function RecentAssignmentsList() {
+  const [assignments, setAssignments] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAssignments = async () => {
+      try {
+        const res = await api.get('/alphas/assignments?status=completed');
+        setAssignments(res.data.data || []);
+      } catch (err) {
+        console.error('Failed to fetch assignments:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAssignments();
+  }, []);
+
+  if (loading) return <div className="text-center py-4">Loading assignments...</div>;
+
+  if (assignments.length === 0) {
+    return (
+      <div className="text-center py-8 bg-white rounded-lg border border-gray-100">
+        <p className="text-gray-500">No completed assignments yet.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-4">
+      {assignments.map(assignment => (
+        <div key={assignment._id} className="bg-white p-4 rounded-xl border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
+          <div>
+            <h4 className="font-bold text-dark">{assignment.subject}</h4>
+            <p className="text-sm text-gray-500">{assignment.type} • {new Date(assignment.completedAt).toLocaleDateString()}</p>
+          </div>
+          <div className="text-right">
+            <div className="font-bold text-success">₹{assignment.agreedPrice}</div>
+            <div className="text-xs text-gray-400">Earned</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // Dashboard Page
 function DashboardPage() {
-  const { alpha } = useAuth();
+  const { alpha, login } = useAuth();
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const [profileRes, earningsRes] = await Promise.all([
+          api.get('/alphas/profile'),
+          api.get('/alphas/earnings')
+        ]);
+
+        const profileData = profileRes.data.data;
+        const earningsData = earningsRes.data.data;
+
+        // Merge earnings data into profile
+        const updatedAlpha = {
+          ...alpha,
+          ...profileData,
+          earnings: earningsData.summary,
+          completedAssignments: earningsData.completedAssignments,
+          rating: earningsData.rating,
+          totalRatings: profileData.totalRatings
+        };
+
+        login(updatedAlpha, {
+          accessToken: localStorage.getItem('alphaToken'),
+          refreshToken: localStorage.getItem('alphaRefreshToken')
+        });
+      } catch (err) {
+        console.error('Failed to refresh profile:', err);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   return (
     <div className="page-container">
       <Sidebar active="dashboard" />
       <main className="main-content">
-        <h1>Welcome, {alpha?.userName || 'Alpha'}! 👋</h1>
+        <h1>Welcome, {alpha?.firstName || alpha?.userName || 'Alpha'}! 👋</h1>
         <div className="stats-grid">
           <div className="stat-card">
-            <h3>💰 Total Earnings</h3>
+            <h3><Wallet className="w-5 h-5 inline mr-2 text-primary" /> Total Earnings</h3>
             <div className="stat-value">₹{alpha?.earnings?.total || 0}</div>
             <div className="stat-detail">Lifetime earnings</div>
           </div>
           <div className="stat-card">
-            <h3>⏳ Pending</h3>
+            <h3><Loader className="w-5 h-5 inline mr-2 text-warning" /> Pending</h3>
             <div className="stat-value text-warning">₹{alpha?.earnings?.pending || 0}</div>
             <div className="stat-detail">Awaiting release</div>
           </div>
           <div className="stat-card">
-            <h3>✅ Withdrawn</h3>
+            <h3><CheckCircle className="w-5 h-5 inline mr-2 text-success" /> Withdrawn</h3>
             <div className="stat-value text-success">₹{alpha?.earnings?.withdrawn || 0}</div>
             <div className="stat-detail">Successfully transferred</div>
           </div>
           <div className="stat-card">
-            <h3>📝 Completed</h3>
+            <h3><CheckSquare className="w-5 h-5 inline mr-2 text-blue-500" /> Completed</h3>
             <div className="stat-value">{alpha?.completedAssignments || 0}</div>
             <div className="stat-detail">Assignments done</div>
           </div>
@@ -296,11 +384,14 @@ function DashboardPage() {
             <div className="stat-value">{alpha?.rating?.toFixed(1) || '0.0'}</div>
             <div className="stat-detail">From {alpha?.totalRatings || 0} reviews</div>
           </div>
-          <div className="stat-card">
-            <h3>🔖 Status</h3>
-            <div className="stat-value capitalize text-lg mt-2">{alpha?.status || 'unknown'}</div>
-            <div className="stat-detail">{alpha?.isAvailable ? 'Available' : 'Unavailable'}</div>
-          </div>
+        </div>
+
+        <div className="mt-8">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+            <CheckSquare className="w-5 h-5 text-success" />
+            Recent Completed Assignments
+          </h2>
+          <RecentAssignmentsList />
         </div>
       </main>
     </div>
@@ -309,7 +400,84 @@ function DashboardPage() {
 
 // Profile Page
 function ProfilePage() {
-  const { alpha } = useAuth();
+  const { alpha, login } = useAuth();
+  const [selectedSkills, setSelectedSkills] = useState(alpha?.skills || []);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(alpha?.avatar || alpha?.userAvatar || '');
+
+  const skillOptions = ['Assignments', 'Practical File', 'Projects'];
+
+  const toggleSkill = (skill) => {
+    setSelectedSkills(prev =>
+      prev.includes(skill)
+        ? prev.filter(s => s !== skill)
+        : [...prev, skill]
+    );
+  };
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size should be less than 5MB');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+
+      const res = await api.put('/alphas/avatar', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      const newAvatarUrl = res.data.data?.avatar || res.data.avatar;
+      setAvatarUrl(newAvatarUrl);
+
+      // Update local storage
+      const updatedAlpha = { ...alpha, avatar: newAvatarUrl, userAvatar: newAvatarUrl };
+      localStorage.setItem('alphaData', JSON.stringify(updatedAlpha));
+      login(updatedAlpha, {
+        accessToken: localStorage.getItem('alphaToken'),
+        refreshToken: localStorage.getItem('alphaRefreshToken')
+      });
+
+      alert('Photo updated successfully!');
+    } catch (err) {
+      console.error('Upload failed:', err);
+      alert('Failed to upload photo. Please try again.');
+    }
+    setUploading(false);
+  };
+
+  const handleSaveSkills = async () => {
+    setSaving(true);
+    try {
+      await api.put('/alphas/profile', { skills: selectedSkills });
+      // Update local state
+      const updatedAlpha = { ...alpha, skills: selectedSkills };
+      localStorage.setItem('alphaData', JSON.stringify(updatedAlpha));
+      login(updatedAlpha, {
+        accessToken: localStorage.getItem('alphaToken'),
+        refreshToken: localStorage.getItem('alphaRefreshToken')
+      });
+      alert('Skills updated successfully!');
+    } catch (err) {
+      alert('Failed to update skills');
+      console.error(err);
+    }
+    setSaving(false);
+  };
 
   return (
     <div className="page-container">
@@ -318,15 +486,35 @@ function ProfilePage() {
         <h1>My Profile</h1>
         <div className="profile-card">
           <div className="profile-header">
-            <div className="profile-avatar text-4xl">
-              {alpha?.userAvatar ? (
-                <img src={alpha.userAvatar} alt="Avatar" className="w-full h-full object-cover" />
+            <label className="profile-avatar text-4xl cursor-pointer relative group">
+              {avatarUrl ? (
+                <img
+                  src={getImageUrl(avatarUrl)}
+                  alt="Avatar"
+                  className="w-full h-full object-cover rounded-full"
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
               ) : (
-                alpha?.userName?.[0] || 'A'
+                alpha?.userName?.[0] || alpha?.firstName?.[0] || 'A'
               )}
-            </div>
+              {/* Camera overlay */}
+              <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                {uploading ? (
+                  <span className="text-white text-sm">...</span>
+                ) : (
+                  <span className="text-white text-xl">📷</span>
+                )}
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+                disabled={uploading}
+              />
+            </label>
             <div className="profile-info">
-              <h2>{alpha?.userName || 'Alpha User'}</h2>
+              <h2>{alpha?.firstName && alpha?.lastName ? `${alpha.firstName} ${alpha.lastName}` : alpha?.displayName || alpha?.userName || 'Alpha User'}</h2>
               <p className="text-gray-500 mb-2">{alpha?.phone}</p>
               <span className={`status-badge ${alpha?.status === 'active' ? 'verified' : 'pending'}`}>
                 {alpha?.status}
@@ -338,23 +526,29 @@ function ProfilePage() {
               <span className="label">College ID</span>
               <span className="value">{alpha?.collegeId}</span>
             </div>
-            <div className="detail-row">
-              <span className="label">Skills</span>
-              <span className="value">{alpha?.skills?.join(', ') || 'Not specified'}</span>
-            </div>
-            <div className="detail-row">
-              <span className="label">Bio</span>
-              <span className="value">{alpha?.bio || 'No bio added'}</span>
-            </div>
-            <div className="detail-row">
-              <span className="label">Available</span>
-              <span className={`value ${alpha?.isAvailable ? 'text-success' : 'text-error'}`}>
-                {alpha?.isAvailable ? 'Yes ✅' : 'No ❌'}
-              </span>
-            </div>
-            <div className="detail-row">
-              <span className="label">Min Budget</span>
-              <span className="value">₹{alpha?.minBudget || 0}</span>
+            <div className="detail-row flex-col items-start gap-3">
+              <span className="label">Skills (Select what you can do)</span>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {skillOptions.map(skill => (
+                  <button
+                    key={skill}
+                    onClick={() => toggleSkill(skill)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedSkills.includes(skill)
+                      ? 'bg-primary text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                  >
+                    {selectedSkills.includes(skill) ? '✓ ' : ''}{skill}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={handleSaveSkills}
+                disabled={saving}
+                className="btn-primary mt-3 py-2 px-4 text-sm"
+              >
+                {saving ? 'Saving...' : 'Save Skills'}
+              </button>
             </div>
           </div>
         </div>
